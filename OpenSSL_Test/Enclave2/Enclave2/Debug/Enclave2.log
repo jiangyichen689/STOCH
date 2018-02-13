@@ -1,0 +1,11 @@
+﻿  Creating proxy/bridge routines
+  Enclave2.cpp
+  Enclave2_t.c
+     Creating library C:\Users\user\Desktop\OpenSSL_Test\Enclave2\Debug\Enclave2.lib and object C:\Users\user\Desktop\OpenSSL_Test\Enclave2\Debug\Enclave2.exp
+Enclave2.obj : error LNK2001: unresolved external symbol _init_exception_handler
+Enclave2_t.obj : error LNK2001: unresolved external symbol _init_exception_handler
+C:\Users\user\Desktop\OpenSSL_Test\lib\sgx_tlibeayfips32.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'X86'
+C:\Users\user\Desktop\OpenSSL_Test\lib\sgx_tssleay32.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'X86'
+C:\Users\user\Desktop\OpenSSL_Test\lib\sgx_tssl.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'X86'
+C:\Users\user\Desktop\OpenSSL_Test\lib\fipsopenssl\x64\sgx_tfipscanister.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'X86'
+C:\Users\user\Desktop\OpenSSL_Test\Enclave2\Debug\Enclave2.dll : fatal error LNK1120: 1 unresolved externals

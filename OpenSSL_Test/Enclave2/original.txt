@@ -1,0 +1,957 @@
+#include "Enclave2_t.h"
+
+#include "sgx_trts.h"
+
+#include <windows.h>
+//#include <openssl>
+#include <string.h>
+#include <vector>
+#include "homomophic.h"
+#include <openssl/bn.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#include <vector>
+#include <queue>
+#include <stdlib.h>
+#include <string>
+
+
+std::vector<char*> DataVector;
+static int BN_lcm(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
+{
+	int ret = 0;
+	BN_CTX_start(ctx);
+
+	BIGNUM *tmp = BN_CTX_get(ctx);
+	BIGNUM *gcd = BN_CTX_get(ctx);
+
+	if (!BN_gcd(gcd, a, b, ctx))
+		goto end;
+	if (!BN_div(tmp, NULL, a, gcd, ctx))
+		goto end;
+	if (!BN_mul(r, b, tmp, ctx))
+		goto end;
+
+	ret = 1;
+end:
+	if (ret != 1)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Error calculating lcm: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+// For key generation
+static int L(BIGNUM *res, const BIGNUM *u, const BIGNUM *n, BN_CTX *ctx)
+{
+	int ret = 1;
+
+	BIGNUM *u_cp = BN_dup(u);
+	if (!BN_sub_word(u_cp, 1))
+		goto end;
+	if (!BN_div(res, NULL, u_cp, n, ctx))
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Error calculating L: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_free(u_cp);
+	return ret;
+}
+
+int generateRandomKeys(paillierKeys *keys, int *key_len, BN_CTX *ctx)
+{
+	int ret = 1, final_key_l = 0;
+	BIGNUM *p, *q, *tmp, *n, *n2, *g, *lamda, *mu;
+
+	if (key_len != NULL && *key_len == 0)
+	{
+		*key_len = DEFAULT_KEY_LEN;
+		final_key_l = *key_len;
+	}
+	else if (key_len != NULL)
+	{
+		final_key_l = *key_len;
+	}
+	else
+	{
+		final_key_l = DEFAULT_KEY_LEN;
+	}
+
+	if (final_key_l < 32)
+	{
+//		fprintf(stderr, "Key lenght too short. Minimum lenght 32 bits");
+		goto end;
+	}
+
+	BN_CTX_start(ctx);
+
+	// Temp BIGNUMs
+	p = BN_CTX_get(ctx);
+	q = BN_CTX_get(ctx);
+	tmp = BN_CTX_get(ctx);
+
+	// Part of the keys BIGNUMs
+	n = BN_new();
+	n2 = BN_new();
+	g = BN_new();
+	lamda = BN_new();
+	mu = BN_new();
+
+	// 1. Choose two large prime numbers
+	// This numbers have to hold gcd(pq, (p-1)(q-1)) = 1
+	unsigned char buffer;
+	do
+	{
+		if (!RAND_bytes(&buffer, sizeof(buffer)))
+			goto end;
+		//srandom((int)buffer);
+
+		if (!BN_generate_prime_ex(p, final_key_l / 2, 0, NULL, NULL, NULL))
+			goto end;
+		if (!BN_generate_prime_ex(q, final_key_l / 2, 0, NULL, NULL, NULL))
+			goto end;
+
+		// 2. Compute n = pq
+		if (!BN_mul(n, p, q, ctx))
+			goto end;
+
+		// Test if primes are ok
+		if (!BN_sub_word(p, 1))
+			goto end;
+		if (!BN_sub_word(q, 1))
+			goto end;
+		if (!BN_mul(tmp, p, q, ctx))
+			goto end;
+
+	} while (BN_cmp(p, q) == 0 || BN_gcd(tmp, tmp, n, ctx) != 1);
+
+	// and lamda = lcm(p-1,q-1)
+	if (!BN_lcm(lamda, p, q, ctx))
+		goto end;
+
+	if (!BN_mul(n2, n, n, ctx))
+		goto end;
+	do
+	{
+		// 3. Select a random integer g moz n2
+		do
+		{
+			if (!BN_rand_range(g, n2))
+				goto end;
+		} while (BN_is_zero(g));
+
+		// 4. Ensure n divides the order of g
+		if (!BN_mod_exp(tmp, g, lamda, n2, ctx))
+			goto end;
+		if (L(tmp, tmp, n, ctx) != 0)
+			goto end;
+
+		BN_mod_inverse(mu, tmp, n, ctx);
+	} while (mu == NULL);
+
+	keys->pub.n = n;
+	keys->pub.n2 = n2;
+	keys->pub.g = g;
+
+	keys->priv.n = BN_dup(n);
+	keys->priv.n2 = BN_dup(n2);
+	keys->priv.lamda = lamda;
+	keys->priv.mu = mu;
+
+	keys->n = BN_dup(n);
+	keys->n2 = BN_dup(n2);
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Error generating keys: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int freeKeys(paillierKeys *keys)
+{
+	if (keys->pub.n)
+		BN_free(keys->pub.n);
+	if (keys->pub.g)
+		BN_free(keys->pub.g);
+	if (keys->pub.n2)
+		BN_free(keys->pub.n2);
+
+	if (keys->priv.lamda)
+		BN_free(keys->priv.lamda);
+	if (keys->priv.mu)
+		BN_free(keys->priv.mu);
+	if (keys->priv.n)
+		BN_free(keys->priv.n);
+	if (keys->priv.n2)
+		BN_free(keys->priv.n2);
+
+	return 0;
+}
+
+int encryptll(BIGNUM *c, const long long plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *m = BN_CTX_get(ctx);
+
+	if (!BN_set_word(m, plain))
+		goto end;
+	if (encrypt(c, m, key, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Can't encrypt %lld: %s", plain, ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int encrypt(BIGNUM *c, const BIGNUM *m, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *r = BN_CTX_get(ctx);
+	BIGNUM *tmp1 = BN_CTX_get(ctx);
+	BIGNUM *tmp2 = BN_CTX_get(ctx);
+
+	// 1. Let m be the message to be encrypted where m E Zn
+	if (BN_cmp(m, key->n) >= 0)
+	{
+//		fprintf(stderr, "Message not in Zn");
+		goto end;
+	}
+
+	// 2. Select random r where r E Zn*
+	do
+	{
+		if (!BN_rand(r, DEFAULT_KEY_LEN, 0, 0))
+			goto end;
+	} while (BN_is_zero(r));
+
+	if (!BN_mod(r, r, key->n, ctx))
+		goto end;
+
+	// 3. Compute ciperthext as c = g^m*r^n mod n^2
+	if (!BN_mod_exp(tmp1, key->g, m, key->n2, ctx))
+		goto end;
+	if (!BN_mod_exp(tmp2, r, key->n, key->n2, ctx))
+		goto end;
+
+	if (!BN_mod_mul(c, tmp1, tmp2, key->n2, ctx))
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Error ecnrypting: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+
+	return ret;
+}
+
+int decrypt(BIGNUM *plain, const BIGNUM *c, const privKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *tmp = BN_CTX_get(ctx);
+
+	// 1. Let c be the ciphertext to decrypt, where c E Zn2
+	if (!BN_cmp(c, key->n2) == 1)
+	{
+//		fprintf(stderr, "Message provided not in Zn2");
+		goto end;
+	}
+
+	// 2. Compute the plaintext message as: m = L(c^lamda mod n2)*mu mod n
+	if (!BN_mod_exp(tmp, c, key->lamda, key->n2, ctx))
+		goto end;
+	if (L(tmp, tmp, key->n, ctx) != 0)
+		goto end;
+	if (!BN_mod_mul(plain, tmp, key->mu, key->n, ctx))
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Can't decrypt: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+int decryptll(long long *plain, const BIGNUM *c, const privKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+	BIGNUM *plain_BN = BN_CTX_get(ctx);
+
+	if (decrypt(plain_BN, c, key, ctx) != 0)
+		goto end;
+
+	*plain = BN_get_word(plain_BN);
+	if (*plain == 0xffffffffL)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "Can't decrypt: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+sub(BIGNUM *result, const BIGNUM *a, const BIGNUM *b, const BIGNUM *n2, BN_CTX *ctx)
+{
+	int ret = 0;
+	BN_CTX_start(ctx);
+
+	BIGNUM *b_inv = BN_CTX_get(ctx);
+
+	if (!BN_mod_inverse(b_inv, b, n2, ctx))
+		goto end;
+
+	if (!BN_mod_mul(result, a, b_inv, n2, ctx))
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "sub: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+subEncPlainll(BIGNUM *result, const BIGNUM *enc, const long long plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *plain_enc = BN_CTX_get(ctx);
+
+	if (encryptll(plain_enc, plain, key, ctx) != 0)
+		goto end;
+
+	if (sub(result, enc, plain_enc, key->n2, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "subEncPlainll: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+subEncPlain(BIGNUM *result, const BIGNUM *enc, const BIGNUM *plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *plain_enc = BN_CTX_get(ctx);
+
+	if (encrypt(plain_enc, plain, key, ctx) != 0)
+		goto end;
+
+	if (sub(result, enc, plain_enc, key->n2, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "subEncPlain: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+subllPlainEnc(BIGNUM *result, const long long plain, const BIGNUM *enc, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *plain_enc = BN_CTX_get(ctx);
+
+	if (encryptll(plain_enc, plain, key, ctx) != 0)
+		goto end;
+
+	if (sub(result, plain_enc, enc, key->n2, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "subllPlainEnc: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+subPlainEnc(BIGNUM *result, const BIGNUM *plain, const BIGNUM *enc, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *plain_enc = BN_CTX_get(ctx);
+
+	if (encrypt(plain_enc, plain, key, ctx) != 0)
+		goto end;
+
+	if (sub(result, plain_enc, enc, key->n2, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "subPlainEnc: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+int
+add(BIGNUM *result, const BIGNUM *a, const BIGNUM *b, const BIGNUM *n2, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *tmp1 = BN_CTX_get(ctx);
+
+	if (!BN_mod_mul(tmp1, a, b, n2, ctx))
+		goto end;
+
+	BN_copy(result, tmp1);
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "add: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+addEncPlainll(BIGNUM *result, const BIGNUM *enc, const long long plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *plain_enc = BN_CTX_get(ctx);
+
+	if (encryptll(plain_enc, plain, key, ctx) != 0)
+		goto end;
+
+	if (add(result, enc, plain_enc, key->n2, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "addEncPlainll: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int
+addEncPlain(BIGNUM *result, const BIGNUM *enc, const BIGNUM *plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+	BN_CTX_start(ctx);
+
+	BIGNUM *plain_enc = BN_CTX_get(ctx);
+
+	if (encrypt(plain_enc, plain, key, ctx) != 0)
+		goto end;
+
+	if (add(result, enc, plain_enc, key->n2, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "addEncPlain: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int mulPlainll(BIGNUM *result, const BIGNUM *a, const long long plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+
+	BN_CTX_start(ctx);
+	BIGNUM *r = BN_CTX_get(ctx);
+
+	if (!BN_set_word(r, plain))
+		goto end;
+
+	if (mulPlain(result, a, r, key, ctx) != 0)
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "mulPlainll: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+	BN_CTX_end(ctx);
+	return ret;
+}
+
+int mulPlain(BIGNUM *result, const BIGNUM *a, const BIGNUM *plain, const pubKey *key, BN_CTX *ctx)
+{
+	int ret = 1;
+
+	if (!BN_mod_exp(result, a, plain, key->n2, ctx))
+		goto end;
+
+	ret = 0;
+end:
+	if (ret)
+	{
+		ERR_load_crypto_strings();
+//		fprintf(stderr, "mulPlain: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+	return ret;
+}
+
+int dupKeys(paillierKeys *out, const paillierKeys *in)
+{
+	out->n2 = BN_dup(in->n2);
+	out->n = BN_dup(in->n);
+
+	out->pub.g = BN_dup(in->pub.g);
+	out->pub.n = out->n;
+	out->pub.n2 = out->n2;
+
+	out->priv.lamda = BN_dup(in->priv.lamda);
+	out->priv.mu = BN_dup(in->priv.mu);
+	out->priv.n = out->n;
+	out->priv.n2 = out->n2;
+
+	return 0;
+}
+
+
+
+
+// this part is for tree-------------------------------------------------
+
+
+
+
+struct TreeNode
+{
+	std::string val;
+	int count;
+	TreeNode* child;
+	std::vector<TreeNode*> sibling;
+	TreeNode(std::string x) : val(x), child(NULL) {}
+};
+
+void Insert(TreeNode* root, std::string value)
+{
+	TreeNode * temproot = new TreeNode(value);
+	if (root->child == NULL)
+		root->child = temproot;
+	else
+		root->sibling.push_back(temproot);
+}
+
+void CreateTree(TreeNode* root, std::vector<std::vector<std::string>> test)
+{
+	for (size_t i = 0; i < test.size(); i++)
+	{
+		TreeNode* cur = root;
+		for (size_t j = 3; j < test[0].size(); j++)
+		{
+			if (cur->child != nullptr&&cur->child->val == test[i][j])
+			{
+				cur->count += 1;
+				cur = cur->child;
+				continue;
+			}
+			else if (cur->sibling.size() > 0)
+			{
+				int k = 0;
+				int size = cur->sibling.size();
+				while (k < size)
+				{
+					if (cur->sibling[k]->val == test[i][j])
+					{
+						cur->count += 1;
+						cur = cur->sibling[k];
+						break;
+					}
+					k++;
+				}
+				if (k < size)
+					continue;
+			}
+			Insert(cur, test[i][j]);
+			if (cur->sibling.size() == 0)
+				cur = cur->child;
+			else
+				cur = cur->sibling.back();
+		}
+	}
+}
+
+
+int BFS(TreeNode* &root, int level, std::string value)
+{
+	std::queue<TreeNode*> treeQ;
+	TreeNode* roottemp;
+	int countLevel = 0;
+	treeQ.push(root);
+	while (!treeQ.empty() && countLevel<level)
+	{
+		int size = treeQ.size();
+		for (int i = 0; i<size; i++)
+		{
+			roottemp = treeQ.front();
+			treeQ.pop();
+			if (roottemp->child != nullptr)
+				treeQ.push(root->child);
+			if (roottemp->sibling.size()>0)
+				for (int j = 0; j<roottemp->sibling.size(); j++)
+					treeQ.push(root->sibling[j]);
+		}
+		countLevel++;
+	}
+
+	int size = treeQ.size();
+	for (int i = 0; i<size; i++)
+	{
+		roottemp = treeQ.front();
+		if (roottemp->val == value)
+		{
+			root = roottemp;
+			return roottemp->count;
+		}
+		treeQ.pop();
+	}
+
+	return -1;
+}
+
+
+
+
+
+
+
+
+
+// this part is for create tree and encrypt--------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+#define KEY_LEN 64
+#define MAX_M_BITS 22
+
+#define MAX_SUB_LEN MAX_M_BITS
+#define SUB_CORRECTION_FACTOR MAX_M_BITS+1
+
+#define MAX_MULT_FACTOR_LEN KEY_LEN - MAX_M_BITS -1
+
+
+void sendStruct(char *buf, size_t lenOfString)
+{
+
+	TreeNode* root = new TreeNode(" ");
+	std::vector<std::vector<std::string>> Data;
+	CreateTree(root, Data);
+
+	std::vector<std::string> query = {"1","GG","2","AA"};
+	std::vector<int> queryResult;
+
+	TreeNode* newroot = root;
+	for (int i = 0; i < query.size(); i += 2)
+	{
+		if (i == 0)
+		{
+			int levelNum = atoi(query[0].c_str());
+			queryResult.push_back(BFS(newroot, levelNum, query[1]));
+		}
+		else
+		{
+			int temp1 = atoi(query[i].c_str());
+			int temp2 = atoi(query[i - 2].c_str());
+			int levelNum = temp1 - temp2;
+			queryResult.push_back(BFS(newroot, levelNum, query[i + 1]));
+		}
+	}
+
+
+
+
+
+
+
+
+	int ret = 1, len = 0;
+	long long decrypted = 0;
+
+	BN_CTX *ctx = BN_CTX_new();
+
+	BIGNUM *random = BN_CTX_get(ctx);
+	BIGNUM *encrypted_random = BN_CTX_get(ctx);
+	BIGNUM *decrypted_random = BN_CTX_get(ctx);
+
+	BIGNUM *random_op = BN_CTX_get(ctx);
+	BIGNUM *random_op_sub = BN_CTX_get(ctx);
+
+	BIGNUM *mul_factor = BN_CTX_get(ctx);
+	BIGNUM *correction_factor = BN_CTX_get(ctx);
+
+	BIGNUM *tmp_result = BN_CTX_get(ctx);
+	BIGNUM *tmp2_result = BN_CTX_get(ctx);
+
+
+
+
+//	if (!BN_rand(random, MAX_M_BITS, 0, 0))
+//		goto end;
+
+	paillierKeys keys;
+
+	len = 2048;
+	if ((ret = generateRandomKeys(&keys, &len, ctx)) != 0)
+		goto end;
+
+//	printf("Random number: ");
+//	BN_printf(random);
+
+	decrypted = 0;
+
+	///////////// Encryption test
+
+	std::vector<BIGNUM*> finalResult;
+	for (int i = 0; i < queryResult.size(); i++)
+	{
+		int temp = queryResult[i];
+		BN_set_word(random, (unsigned long)temp);
+		encrypt(encrypted_random, random, &keys.pub, ctx);
+		finalResult.push_back(encrypted_random);
+	}
+
+	std::vector<char*> testResult;
+	for (int i = 0; i < finalResult.size(); i++)
+	{
+		decrypt(decrypted_random, encrypted_random, &keys.priv, ctx);
+		char* p = BN_bn2dec(decrypted_random);
+		testResult.push_back(p);
+		OPENSSL_free(p);
+	}
+
+
+
+
+//	if (encrypt(encrypted_random, random, &keys.pub, ctx) != 0)
+//		goto end;
+
+//	if (decrypt(decrypted_random, encrypted_random, &keys.priv, ctx) != 0)
+//		goto end;
+
+//	printf("Decrypted: ");
+//	BN_printf(decrypted_random);
+
+	if (BN_cmp(decrypted_random, random) == 0) {
+//		printf("Decrytpion OK!\n");
+	}
+	else {
+//		printf("Decrytpion ERROR!\n");
+	}
+	///////////// OK!
+
+	// Generate random number to be subtracted and added
+	if (!BN_rand(random_op, MAX_SUB_LEN, 0, 0))
+		goto end;
+
+	// Set correction factor to avoid negative results
+	if (!BN_rand(correction_factor, SUB_CORRECTION_FACTOR, 0, 0))
+		goto end;
+
+//	printf("Sub/add var: ");
+//	BN_printf(random_op);
+
+	///////////// Subtraction test
+	if (subEncPlain(tmp_result, encrypted_random, random_op, &keys.pub, ctx) != 0)
+		goto end;
+
+	/* Apply correction factor */
+	if (addEncPlain(tmp_result, tmp_result, correction_factor, &keys.pub, ctx) != 0)
+		goto end;
+	/**/
+
+	if (decrypt(tmp_result, tmp_result, &keys.priv, ctx) != 0)
+		goto end;
+
+	/* Revert correction factor*/
+	if (!BN_sub(tmp2_result, tmp_result, correction_factor))
+		goto end;
+	/**/
+
+//	printf("Subtraction result: ");
+//	BN_printf(tmp2_result);
+
+	if (!BN_sub(random_op_sub, decrypted_random, random_op))
+		goto end;
+
+	if (BN_cmp(tmp2_result, random_op_sub) == 0) {
+//		printf("Subtraction OK!\n");
+	}
+	else {
+//		printf("Subtraction ERROR!\n");
+//		printf("Expected result: ");
+//		BN_printf(random_op_sub);
+	}
+	/////////////
+
+
+	///////////// Addition test
+	if (addEncPlain(tmp_result, encrypted_random, random_op, &keys.pub, ctx) != 0)
+		goto end;
+
+	if (decrypt(tmp_result, tmp_result, &keys.priv, ctx) != 0)
+		goto end;
+
+//	printf("Addition result: ");
+//	BN_printf(tmp_result);
+
+	if (!BN_add(tmp2_result, decrypted_random, random_op))
+		goto end;
+
+	if (BN_cmp(tmp_result, tmp2_result) == 0) {
+//		printf("Addition OK!\n");
+	}
+	else {
+//		printf("Addition ERROR!\n");
+//		printf("Expected result: ");
+//		BN_printf(tmp2_result);
+	}
+	/////////////
+
+	///////////// Multi. test
+	if (!BN_rand(mul_factor, MAX_MULT_FACTOR_LEN, 0, 0))
+		goto end;
+
+//	printf("Mult. factor: ");
+//	BN_printf(mul_factor);
+
+	if (mulPlain(tmp_result, encrypted_random, mul_factor, &keys.pub, ctx) != 0)
+		goto end;
+
+	if (decrypt(tmp_result, tmp_result, &keys.priv, ctx) != 0)
+		goto end;
+
+//	printf("Mutliplication result: ");
+//	BN_printf(tmp_result);
+
+	if (!BN_mul(tmp2_result, decrypted_random, mul_factor, ctx))
+		goto end;
+
+	if (BN_cmp(tmp_result, tmp2_result) == 0) {
+//		printf("Mutliplication OK!\n");
+	}
+	else {
+//		printf("Mutliplication ERROR!\n");
+//		printf("Expected result: ");
+//		BN_printf(tmp2_result);
+	}
+	/////////////
+
+	ret = 0;
+end:
+	if (ret) {
+		//		printf("ERROR!\n");
+		ERR_load_crypto_strings();
+		//		fprintf(stderr, "main: %s", ERR_error_string(ERR_get_error(), NULL));
+	}
+
+
+
+	//const char *secret = "Hello Enclave!";
+	//if (lenOfString > strlen(secret))
+	//{
+	//	memcpy(buf, secret, strlen(secret) + 1);
+	//}
+}

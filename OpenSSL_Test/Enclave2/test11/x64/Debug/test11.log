@@ -1,0 +1,5 @@
+﻿  Source.cpp
+c:\users\user\desktop\openssl_test\enclave2\test11\source.cpp(63): warning C4244: '=': conversion from 'std::streamoff' to 'int', possible loss of data
+c:\users\user\desktop\openssl_test\enclave2\test11\source.cpp(112): warning C4244: 'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
+  test11.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Debug\test11.exe
+  test11.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Debug\test11.pdb (Full PDB)

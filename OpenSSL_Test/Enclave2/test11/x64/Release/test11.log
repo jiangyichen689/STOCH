@@ -1,0 +1,10 @@
+﻿  Creating untrusted proxy/bridge routines
+  Enclave2_u.c
+  Source.cpp
+  Generating code
+  0 of 398 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    28 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  test11.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Release\test11.exe
+  test11.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Release\test11.pdb (Full PDB)

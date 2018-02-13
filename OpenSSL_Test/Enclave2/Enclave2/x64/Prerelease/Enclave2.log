@@ -1,0 +1,36 @@
+﻿  Creating proxy/bridge routines
+  Enclave2.cpp
+  Enclave2_t.c
+sgx_tssl.lib(texceptions.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(texceptions.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(ttime.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(ttime.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tstdlib.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tstdlib.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tstdio.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tstdio.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tkernel32_threading.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tkernel32_threading.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tkernel32.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tkernel32.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tkernel32_module.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tkernel32_module.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tkernel32_file.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tkernel32_file.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tadvapi32.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tadvapi32.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tuser32.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tuser32.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(bionic_sscanf.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(bionic_sscanf.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(bionic_vswprintf.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(bionic_vswprintf.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tcpu_utils.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tcpu_utils.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tstring.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tstring.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(bionic_localtime.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(bionic_localtime.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tSgxSSL_api.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tSgxSSL_api.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(tws2_32.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(tws2_32.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+sgx_tssl.lib(bionic_glue.obj) : warning LNK4099: PDB 'sgx_tssl.pdb' was not found with 'sgx_tssl.lib(bionic_glue.obj)' or at 'C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\sgx_tssl.pdb'; linking object as if no debug info
+     Creating library C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\Enclave2.lib and object C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\Enclave2.exp
+  Enclave2.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\Enclave2.dll
+  The required memory is 0x4228000.
+  Succeed.
+  <EnclaveConfiguration>
+      <ProdID>0</ProdID>
+      <ISVSVN>0</ISVSVN>
+      <StackMaxSize>0x40000</StackMaxSize>
+      <HeapMaxSize>0x4000000</HeapMaxSize>
+      <TCSNum>1</TCSNum>
+      <TCSPolicy>1</TCSPolicy>
+      <DisableDebug>0</DisableDebug>
+      <MiscSelect>0</MiscSelect>
+      <MiscMask>0xFFFFFFFF</MiscMask>
+  </EnclaveConfiguration>

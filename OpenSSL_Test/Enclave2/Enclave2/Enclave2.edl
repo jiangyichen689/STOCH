@@ -1,0 +1,17 @@
+enclave {
+    
+	from "sgx_tssl.edl" import *;
+
+    trusted {
+        /* define ECALLs here. */
+		public void generateKey([out, size=publicKeyLen] char* publicKey,size_t publicKeyLen);
+		public void sendStruct([in,out, size=lenOfString] char* buf, size_t lenOfString);
+		public void Query([in,out,size=len] char* query, size_t len);
+		//public void enclaveAddition([int,out, size=easlen] char* additionResult, size_t easlen);
+    };
+
+    untrusted {
+        /* define OCALLs here. */
+
+    };
+};

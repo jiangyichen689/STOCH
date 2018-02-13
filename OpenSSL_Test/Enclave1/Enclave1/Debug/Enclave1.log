@@ -1,0 +1,9 @@
+﻿  Creating proxy/bridge routines
+  Enclave1.cpp
+  Enclave1_t.c
+ipo: : error #11018: Cannot open sgx_trts.lib
+ipo: : error #11018: Cannot open sgx_tstdc.lib
+ipo: : error #11018: Cannot open sgx_tservice.lib
+ipo: : error #11018: Cannot open sgx_tcrypto.lib
+ipo: : error #11018: Cannot open sgx_tcxx.lib
+LINK : fatal error LNK1181: cannot open input file 'sgx_trts.lib'

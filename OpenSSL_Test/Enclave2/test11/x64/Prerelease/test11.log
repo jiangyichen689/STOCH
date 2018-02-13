@@ -1,0 +1,10 @@
+﻿  Creating untrusted proxy/bridge routines
+  Enclave2_u.c
+  Source.cpp
+Source.cpp(63): warning C4244: '=': conversion from 'std::streamoff' to 'int', possible loss of data
+Source.cpp(112): warning C4244: 'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
+  Generating code
+  All 457 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  test11.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\test11.exe
+  test11.vcxproj -> C:\Users\user\Desktop\OpenSSL_Test\Enclave2\x64\Prerelease\test11.pdb (Full PDB)

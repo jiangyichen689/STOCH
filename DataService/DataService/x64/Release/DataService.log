@@ -1,0 +1,16 @@
+﻿  DataService.cpp
+DataService.cpp(644): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+DataService.cpp(698): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+DataService.cpp(809): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+DataService.cpp(998): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+DataService.cpp(1010): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+DataService.cpp(1015): warning C4244: 'argument': conversion from 'long' to 'char', possible loss of data
+DataService.cpp(1021): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+DataService.cpp(1033): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  Generating code
+  5 of 1065 functions ( 0.5%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  DataService.vcxproj -> C:\Users\user\Desktop\DataService\x64\Release\DataService.exe
+  DataService.vcxproj -> C:\Users\user\Desktop\DataService\x64\Release\DataService.pdb (Full PDB)

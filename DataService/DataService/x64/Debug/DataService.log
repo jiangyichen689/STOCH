@@ -1,0 +1,12 @@
+﻿  DataService.cpp
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(644): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(698): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(809): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(991): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(1003): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(1008): warning C4244: 'argument': conversion from 'long' to 'char', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(1014): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(1026): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+c:\users\user\desktop\dataservice\dataservice\dataservice.cpp(791): warning C4715: 'toBinary': not all control paths return a value
+  DataService.vcxproj -> C:\Users\user\Desktop\DataService\x64\Debug\DataService.exe
+  DataService.vcxproj -> C:\Users\user\Desktop\DataService\x64\Debug\DataService.pdb (Partial PDB)
